@@ -7,6 +7,7 @@ import Storage from 'react-native-storage';
 import imgSorting from "./images/sorting.png";
 import imgMessenger from "./images/messenger.png";
 import AsyncStorage from '@react-native-community/async-storage';
+import MenuDrawer from 'react-native-side-drawer'
 const screenWidth = Dimensions.get('screen').width;
 const styles = StyleSheet.create({
     textViewStyle: {
@@ -41,7 +42,7 @@ const styles = StyleSheet.create({
     loadMoreBtn: {
         padding: 10,
         backgroundColor: '#800000',
-        color: '#fff',
+        color: '#ffffff',
         borderRadius: 4,
         flexDirection: 'row',
         justifyContent: 'center',
@@ -109,9 +110,20 @@ const styles = StyleSheet.create({
         flex:1,
         color:"#FFFFFF",
     },
+    animatedBox: {
+        flex: 1,
+        backgroundColor: "#38C8EC",
+        padding: 10
+    },
     icon:{
         height: 20,
         width: 20,
+    },
+    drawerStyles: {
+        shadowColor: '#000000',
+        shadowOpacity: 0.8,
+        shadowRadius: 3,
+        paddingLeft: 3,
     }
 });
 const userInfo =  {
@@ -211,7 +223,49 @@ class HomeScreen extends React.Component {
         );
     }
 }
-
+class CategoryScreen extends React.Component {
+    static navigationOptions = ({ navigation }) => {
+        return {
+            title: 'Каталог',
+            headerStyle: {
+                backgroundColor: '#038860',
+            },
+            headerTintColor: '#fbdfa1',
+            headerTitleStyle: {
+                fontWeight: 'bold',
+            },
+            headerRight: (
+                <TouchableOpacity onPress={() => navigation.navigate('Category')}
+                                  style={styles.sorting}>
+                    <Image style={styles.sorting} source={imgSorting}/>
+                </TouchableOpacity>
+            ),
+        }
+    };
+    _renderItem = () => {
+        return (
+        <Text>
+            Тест
+       </Text>
+        )
+    }
+    render() {
+        if (this.state.isLoading) {
+            return (
+                <View style={{flex: 1, paddingTop: 20}}>
+                    <ActivityIndicator/>
+                </View>
+            );
+        }
+        return (
+            <View style={{flex: 1, alignItems: "center", justifyContent: "center"}}>
+                <FlatList
+                    renderItem={this._renderItem}
+                />
+            </View>
+        );
+    }
+}
 class CatalogScreen extends React.Component {
     constructor(props) {
 
@@ -221,7 +275,9 @@ class CatalogScreen extends React.Component {
             isLoading: true,
             dataSource: [],
             page: 1,
-        }
+            open: false
+        };
+
         this.loadPage = function() {
             return fetch('http://hooody.ru/shop/catalog?json=true&page='+encodeURIComponent(this.state.page++))
                 .then((response) => response.json())
@@ -237,7 +293,10 @@ class CatalogScreen extends React.Component {
                     console.error(error);
                 });
         }
+
     }
+
+
     static navigationOptions = ({ navigation }) => {
         return {
             title: 'Каталог',
@@ -249,16 +308,18 @@ class CatalogScreen extends React.Component {
                 fontWeight: 'bold',
             },
             headerRight: (
-                <TouchableOpacity onPress={() => navigation.navigate('Settings')}
+                <TouchableOpacity onPress = {navigation.getParam('wrOpen')}
                                   style={styles.sorting}>
-                    <Image style={styles.sorting} source={imgSorting}/>
+                    <Image  style={styles.sorting} source={imgSorting}/>
                 </TouchableOpacity>
             ),
         }
     };
     componentDidMount() {
-        this.loadPage()
+        this.loadPage();
+        this.props.navigation.setParams({ wrOpen: this._wrOpen });
     }
+    _wrOpen = () => {this.setState({open: !this.state.open})};
     _renderItem = ({item}) => {
         return (
             <Image source = {{uri: 'http://hooody.ru/item/'+item.gimg+'-'+item.defaultcolor+'-woman-300.png'}} style = {{margin: 1,
@@ -275,14 +336,20 @@ class CatalogScreen extends React.Component {
             <View style={styles.footer}>
                 <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() =>  this.loadPage()}
                     //On Click of button calling loadMoreData function to load more data
                     style={styles.loadMoreBtn}>
-                    <Text style={styles.btnText}>Загрузить еще {this.state.page}</Text>
+                    <Text>Больше нет...</Text>
                 </TouchableOpacity>
             </View>
         );
     }
+    _drawerContent = () => {
+        return (
+            <TouchableOpacity  style={styles.animatedBox}>
+                <Text>Close</Text>
+            </TouchableOpacity>
+        );
+    };
     render() {
         if (this.state.isLoading) {
             return (
@@ -293,14 +360,26 @@ class CatalogScreen extends React.Component {
         }
         return (
             <View style={{flex: 1, alignItems: "center", justifyContent: "center"}}>
-                <FlatList
+                 <FlatList
                     data={this.state.dataSource}
                     numColumns={3}
                     renderItem={this._renderItem}
                     ListFooterComponent={this._renderFooter.bind(this)}
                     keyExtractor={(item, gimg) => gimg.toString()}
+                    onEndReached={() =>  this.loadPage()}
                 />
+                <MenuDrawer
+                    open={this.state.open}
+                    drawerContent={this._drawerContent()}
+                    drawerPercentage={45}
+                    animationTime={250}
+                    overlay={true}
+                    opacity={0.4}
+                    position = 'right'
+                >
+                </MenuDrawer>
             </View>
+
         );
     }
 }
@@ -348,7 +427,7 @@ class SettingsScreen extends React.Component {
                     leftIcon={{ type: 'font-awesome', name: 'chevron-left' }}
 
                 />
-                <Input
+                <Input secureTextEntry={true}
                     placeholder='Пароль'
                     onChange={(event) =>  {
                         let data = event.nativeEvent.text;
@@ -391,7 +470,9 @@ const AppNavigator = createStackNavigator({
     },
     Settings: {
         screen: SettingsScreen
+    },
+    Category: {
+        screen: CategoryScreen
     }
 });
-
 export default createAppContainer(AppNavigator);
